@@ -10,23 +10,22 @@ import {
   ShallowRef,
 } from "vue";
 
-export type VueProps<T> = T extends ConcreteComponent<infer Props>
-  ? Props
+export type VueProps<T> = T extends ConcreteComponent<infer TProps>
+  ? TProps
   : T extends Component<infer Props>
   ? Props
   : any;
-
 
 const defaultCallback = (args: unknown) => {};
 
 type NiceModalContext = {
   visibleRef: ShallowRef<boolean>;
-  show():Promise<unknown>;
-  hide():void;
-  remove():void;
-  resolve(args:unknown):void;
-  reject(args:unknown):void;
-}
+  show(): Promise<unknown>;
+  hide(): void;
+  remove(): void;
+  resolve(args: unknown): void;
+  reject(args: unknown): void;
+};
 
 export function create<C extends Component, Props extends {} = VueProps<C>>(
   Comp: C
@@ -64,11 +63,11 @@ export function create<C extends Component, Props extends {} = VueProps<C>>(
     rejectCallback(args);
   }
   function remove() {
+    hide();
     removedRef.value = true;
   }
 
   const Placeholder = defineComponent(function () {
-
     provide(NiceModalContext, {
       visibleRef,
       show,
@@ -76,7 +75,7 @@ export function create<C extends Component, Props extends {} = VueProps<C>>(
       remove,
       resolve,
       reject,
-    })
+    });
     return function render() {
       const args = argsRef.value;
       const removed = removedRef.value;
@@ -90,16 +89,15 @@ export function create<C extends Component, Props extends {} = VueProps<C>>(
     remove,
   };
 
-  Placeholder.service = service
+  Placeholder.service = service;
 
   return Placeholder as DefineComponent<Partial<Props>> & {
     service: typeof service;
   };
 }
 
-
-
-const NiceModalContext: InjectionKey<NiceModalContext> = Symbol("NiceModalContext");
+const NiceModalContext: InjectionKey<NiceModalContext> =
+  Symbol("NiceModalContext");
 
 export function useModal() {
   const modal = inject(NiceModalContext);
@@ -110,3 +108,17 @@ export function useModal() {
 
   return modal;
 }
+
+export function elDialog(modal: NiceModalContext) {
+  return {
+    modelValue: modal.visibleRef.value,
+    onClose: modal.hide,
+    onClosed: modal.remove,
+  };
+}
+
+export default {
+  useModal,
+  create,
+  elDialog,
+};
